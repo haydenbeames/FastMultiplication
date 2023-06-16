@@ -48,98 +48,121 @@ module mul_4to2_tree(
     end
 
     //generate first stage of tree
-    logic [DATA_LEN/2-1:0][DATA_LEN*2-1:0] s_st1, c_st1, cout_st1;
-    logic [DATA_LEN/4-1:0][DATA_LEN*2-1:0] s_st2, c_st2, cout_st2;
+    logic [DATA_LEN/2-1:0][DATA_LEN*2-1:0] cout_stg1 = '{default:0};
+    logic [DATA_LEN/4-1:0][DATA_LEN*2-1:0] cout_stg2 = '{default:0};
     
-    logic [DATA_LEN/2-1:0][DATA_LEN*2-1:0] in_stg2 = '{default:'X};
+    logic [DATA_LEN/2-1:0][DATA_LEN*2-1:0] in_stg2;
     logic [DATA_LEN/4-1:0][DATA_LEN*2-1:0] in_stg3 = '{default:'X};
-    genvar i,j;
     
-    always_comb begin 
-        for (int j = 0; j < 4; j++) 
-            for (int i = j; i >= 0; i--) 
-                in_stg2[i][j] = pp[i][j];
+    genvar g_i,g_j;
 
-        for (int j = 0; j < 4; j++) 
-            for (int i = 12; i >= 0; i--) 
-                in_stg2[i][j] = pp[i][j];
+    //create stage 2 default inputs (just original partial products)
+    always_comb begin          
+        for (int i = 0; i < 4; i++)
+            for (int j = i; j >= 0; j--)
+                in_stg2[j][i] = pp[j][i];
                 
+        for (int j = 0; j <= 2; j++)
+            for (int i = 3; i >= j; i--)
+                in_stg2[i][j+4] = pp[i][j+4];
                 
-     in_stg2[3]
+        for (int j = 0; j <= 2; j++) 
+            for (int i = (2-j); i >= 0; i--)
+                in_stg2[i][j+12] = pp[i][j+12]; 
+                
+        in_stg2[2][11] = pp[2][11]; 
+        in_stg2[2][10] = pp[2][10];
     end
+    
+    //stage 1 adder tree
     generate
         
-        ha ha_stg1_ur(.a(pp[0][4]), .b(pp[1][4]), .sum(in_stg2[0][4]), .cout(in_stg2[1][5]));
+        ha ha_stg1_0_4(.a(pp[0][4]), .b(pp[1][4]), .s(in_stg2[0][4]), .c(in_stg2[1][5]));
+        
+        for (g_i = 5; g_i <= 10; g_i++) begin 
+            c_4to2 c_4to2_stg1_0(.in1(pp[0][g_i]),
+                                 .in2(pp[1][g_i]),
+                                 .in3(pp[2][g_i]),
+                                 .in4(pp[3][g_i]), //0 for 2nd 4:2 compressor
+                                 .cin( cout_stg1[0][g_i-1]),
+                                 .s(     in_stg2[0][g_i]),
+                                 .c(     in_stg2[1][g_i+1]),
+                                 .cout(cout_stg1[0][g_i])
+                                 );       
+        end
+        
+        assign in_stg2[3][11]  = cout_stg1[0][10];
+        
+        csa csa_stg1_0_11(.a(pp[0][11]), .b(pp[1][11]), .c(pp[2][11]), .s(in_stg2[0][11]), .cout(in_stg2[3][12]));
+        
+        ha ha_stg1_1_6(.a(pp[4][6]), .b(pp[5][6]), .s(in_stg2[2][6]), .c(in_stg2[3][7]));
+        
+        for (g_i = 7; g_i <= 8; g_i++) begin 
+            c_4to2 c_4to2_stg1_0(.in1(pp[4][g_i]),
+                                 .in2(pp[5][g_i]),
+                                 .in3(pp[6][g_i]),
+                                 .in4(pp[7][g_i]),
+                                 .cin( cout_stg1[0][g_i-1]),
+                                 .s(     in_stg2[2][g_i]),
+                                 .c(     in_stg2[3][g_i+1]),
+                                 .cout(cout_stg1[1][g_i])
+                                 );       
+        end
+        
+        csa csa_stg1_1_9(.a(pp[4][9]), .b(pp[5][9]), .c(cout_stg1[1][8]), .s(in_stg2[2][9]), .cout(in_stg2[3][10]));
+                                  
+    endgenerate
+    
+    //create stage 3 default inputs (just unused from stage 2)
+    always_comb begin
+        in_stg3[0][0] = in_stg2[0][0];
+        in_stg3[0][1] = in_stg2[0][1];
+        in_stg3[1][1] = in_stg2[1][1];
+        in_stg3[1][2] = in_stg2[1][2];
+        in_stg3[0][14] = in_stg2[0][14];
+    end
+    
+    //stage 2 adder tree 
+    generate
+        ha ha_stg2_0(.a(in_stg2[0][2]), .b(in_stg2[1][2]), .s(in_stg3[0][2]), .c(in_stg3[1][3]));
+        
+        for (g_i = 3; g_i <= 12; g_i++) begin 
+            c_4to2 c_4to2_stg1_0(.in1(in_stg2[0][g_i]),
+                                 .in2(in_stg2[1][g_i]),
+                                 .in3(in_stg2[2][g_i]),
+                                 .in4(in_stg2[3][g_i]), 
+                                 .cin( cout_stg2[0][g_i-1]),
+                                 .s(     in_stg3[0][g_i]),
+                                 .c(     in_stg3[1][g_i+1]),
+                                 .cout(cout_stg2[0][g_i])
+                                 );                   
+        end
+        
+        csa csa_stg2_0_13(.a(in_stg2[0][13]), .b(in_stg2[1][13]), .c(cout_stg2[0][12]), .s(in_stg3[0][13]), .cout(in_stg3[1][14]));
         
     endgenerate
     
+    logic [DATA_LEN*2-2:0] sum_4to2_tree, cout_4to2_tree;
+    logic [DATA_LEN*2-1:0] mul_result; //unisigned multiplication cannot overflow
+    
+    //stage 3 (add sum and carries for final product)
+    always_comb begin
+        sum_4to2_tree  = '0;
+        cout_4to2_tree = '0;
+        for (int i = 1; i < (DATA_LEN*2)-2; i++) begin
+            sum_4to2_tree[i]  = in_stg3[0][i];
+            cout_4to2_tree[i] = in_stg3[1][i];
+        end
+        sum_4to2_tree[0] = in_stg3[0][0];
+        
+    end
+    
+    assign mul_result = sum_4to2_tree + cout_4to2_tree;
     /*
     generate
-        assign cout_st1 = '{default:0};
-        assign s_st1    = '{default:0};
-        assign c_st1    = '{default:0};
-        //make 1st half adder
-        ha ha_1ur(pp[0][4], pp[1][4], s_st1[0][4], cout_st1[0][4]); //1 upper right
-        //make 2nd lower half adder
-        ha ha_1lr(pp[4][6], pp[5][6], s_st1[2][6], cout_st1[2][6]); //1 lower right
-        
-        //generate 1st stage 4to2 compressors
-        for (i = 5; i < 10; i++) begin: gen_1st_U_4to2 //upper
-      compressor_4_2 c4to2(.in1(pp[0][i]),
-                           .in2(pp[1][i]),
-                           .in3(pp[2][i]),
-                           .in4(pp[3][i]),
-                           .cin( cout_st1[0][i-1]),
-                           .s(  in_stg2[0][i]),
-                           .c(  in_stg2[1][i+1]),
-                           .cout(cout_st1[0][i])
-                           );    
-                                       
-        end
-        
-        for (i = 7; i < 10; i++) begin: gen_1st_L_4to2 //lower
-      compressor_4_2 c4to2(.in1(pp[4][i]),
-                           .in2(pp[5][i]),
-                           .in3(pp[6][i]),
-                           .in4(pp[7][i]), //0 for 2nd 4:2 compressor
-                           .cin( cout_st1[2][i-1]),
-                           .s(  in_stg2[2][i]),
-                           .c(  in_stg2[3][i+1]),
-                           .cout(cout_st1[2][i])
-                           );             
-        end
-      compressor_4_2 c4to2_10(.in1(pp[4][i]),
-                           .in2(pp[5][i]),
-                           .in3(pp[6][i]),
-                           .in4(pp[7][i]), //0 for 2nd 4:2 compressor
-                           .cin( cout_st1[2][9]),
-                           .s(  in_stg2[2][i]),
-                           .c(  in_stg2[3][i+1]),
-                           .cout(cout_st1[2][i])
-                           );                     
-        
-        ha ha_1ll(pp[4][9], pp[5][9], s_st1[2][9], cout_st1[2][9]); //1 lower left 
-        
-        fa fa_1ul(pp[0][11], pp[1][11], pp[2][11], s_st1[0][11], cout_st1[0][11]);
+        for (g_i = 1; g_i <= 14; g_i++) begin 
+            ha ha_stg3(.a(in_stg3[0][g_i]), .b(in_stg3[1][g_i]), .s(mul_result[g_i]), .c
+        end 
     endgenerate
-    
-    //second stage
-    generate
-        assign cout_st2 = '{default:0};
-        assign s_st2    = '{default:0};
-        assign c_st2    = '{default:0};
-        
-        for (i = 7; i < 10; i++) begin: gen_2nd_4to2
-      compressor_4_2 c4to2(.in1(s_st1[0][i]),
-                           .in2(c_st1[0][i-1]),
-                           .in3(s_st1[2][i]),
-                           .in4(c_st1[2][i-1]), //0 for 2nd 4:2 compressor
-                           .cin( cout_st2[0][i-1]),
-                           .s(      s_st2[0][i]),
-                           .c(      c_st2[0][i]),
-                           .cout(cout_st2[0][i])
-                           );                
-        end
-        */
-            
+    */
 endmodule
