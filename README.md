@@ -1,5 +1,5 @@
 # FastMultiplication
-Fast Multiplication algorithm in SystemVerilog by using 4 to 2 compressors
+Fast Multiplication algorithm in SystemVerilog by using 4 to 2 compressors combined with Half adders and CSA (Carry Sum Adders)
 
 ## 8 Bit 4:2 Compression Tree Multiplication Now Funtional!!!!!
 
