@@ -1,8 +1,6 @@
 # FastMultiplication
 Fast Multiplication algorithm in SystemVerilog by using 4 to 2 compressors
 
-#will update code within a week
+## 8 Bit 4:2 Compression Tree Multiplication Now Funtional!!!!!
 
-#BRUHHH LITERALLY SO CLOSE
-
-#multiplication is basically exact so miswired something
+- Now to make 32 bit and 64 bit :(((
