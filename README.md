@@ -1,7 +1,7 @@
 # FastMultiplication
 Fast Multiplication algorithm in SystemVerilog by using 4 to 2 compressors combined with Half adders and CSA (Carry Sum Adders)
 
-## 8 Bit 4:2 Compression Tree Multiplication Now Funtional!!!!!
+## 8 Bit 4:2 Compression Tree Multiplication Now Functional!!!!!
 
 - Now to make 16 bit, 32 bit and 64 bit : )
 - but first need to make a signed 8 bit multiplier
