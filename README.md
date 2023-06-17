@@ -10,4 +10,4 @@ Fast Multiplication algorithm in SystemVerilog by using 4 to 2 compressors combi
 
 - Have seen repositories of 4:2 reduction schemes but likely none as efficient as this implementation
 
-  # Also need to make a CPA for final adder -> should add even more performance benefits
+- at end of multiplication tree, just use CPA (Carry Propogate Adder) to get final results
