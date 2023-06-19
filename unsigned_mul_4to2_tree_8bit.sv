@@ -21,7 +21,8 @@
 
 localparam DATA_LEN = 8;
 module mul_4to2_tree(
-    input wire logic [DATA_LEN-1:0] op1, op2
+    input wire logic [DATA_LEN-1:0] op1, op2,
+    output logic [DATA_LEN*2-1:0] mul_result //unsigned multiplication cannot overflow
     );
     
     
@@ -48,11 +49,11 @@ module mul_4to2_tree(
     end
 
     //generate first stage of tree
-    logic [DATA_LEN/2-1:0][DATA_LEN*2-1:0] cout_stg1 = '{default:0};
-    logic [DATA_LEN/4-1:0][DATA_LEN*2-1:0] cout_stg2 = '{default:0};
+    logic [DATA_LEN/2-1:0][DATA_LEN*2-1:0] cout_stg1;
+    logic [DATA_LEN/4-1:0][DATA_LEN*2-1:0] cout_stg2;
     
-    logic [DATA_LEN/2-1:0][DATA_LEN*2-1:0] in_stg2 = '{default:'0};
-    logic [DATA_LEN/4-1:0][DATA_LEN*2-1:0] in_stg3 = '{default:'0};
+    logic [DATA_LEN/2-1:0][DATA_LEN*2-1:0] in_stg2;
+    logic [DATA_LEN/4-1:0][DATA_LEN*2-1:0] in_stg3;
     
     genvar g_i,g_j;
 
@@ -153,7 +154,7 @@ module mul_4to2_tree(
     endgenerate
     
     logic [DATA_LEN*2-2:0] sum_4to2_tree, cout_4to2_tree;
-    logic [DATA_LEN*2-1:0] mul_result; //unsigned multiplication cannot overflow
+    
     
  
     
