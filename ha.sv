@@ -1,10 +1,10 @@
 //half adder
 module ha(
   input wire logic a, b,
-  output logic sum, cout
+  output logic s, c
   );
   
-  assign sum = a^b;
-  assign cout = a&b;
+  assign s = a^b;
+  assign c = a&b;
   
 endmodule
