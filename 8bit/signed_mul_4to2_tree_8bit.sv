@@ -29,12 +29,14 @@ localparam TRUE = 1;
 localparam FALSE = 0;
 
 module signed_mul_4to2_tree_8bit(
+    input wire logic clk,
     input wire logic [DATA_LEN-1:0] op1, op2,
     input wire logic [FUNC3_WIDTH-1:0] func3,
     output logic [DATA_LEN*2-1:0] mul_result
     );
     
     logic signed_op1_ex1, signed_op2_ex1;
+
     //determine if signed multiplication
     always_comb begin
         case(func3)
@@ -80,7 +82,7 @@ module signed_mul_4to2_tree_8bit(
         for (int i = 0; i < DATA_LEN-1; i++) begin
             for (int j = 0; j < DATA_LEN*2; j++) begin
                 if (j < i)
-                    pp_nontri[i][j] = 1'b0;
+                    pp_nontri[i][j] = 1'bX;
                 else if (j < DATA_LEN + i)
                     pp_nontri[i][j] = multiplicand_qual[i][j-i];
                 else
@@ -97,6 +99,7 @@ module signed_mul_4to2_tree_8bit(
             else
                 pp_nontri[DATA_LEN-1][j] = signed_op1_ex1 & op2[DATA_LEN-1] & op1[DATA_LEN-1];
         end
+
         pp_nontri[DATA_LEN-1][DATA_LEN*2-1] = signed_op1_ex1 & op2[DATA_LEN-1] & multiplicand_qual[DATA_LEN-1][DATA_LEN-1];
 
         /* Dont need to put lower partial products to upper to create triangle in signed multiplication
@@ -146,7 +149,7 @@ module signed_mul_4to2_tree_8bit(
         
         assign cout_stg1[0][4] = 1'b0;
         
-        for (g_i = 5; g_i < DATA_LEN*2; g_i++) begin 
+        for (g_i = 5; g_i < DATA_LEN*2; g_i++) begin: c_4to2_stg1_0
             c_4to2 c_4to2_stg1_0(.in1(pp[0][g_i]),
                                  .in2(pp[1][g_i]),
                                  .in3(pp[2][g_i]),
@@ -162,8 +165,8 @@ module signed_mul_4to2_tree_8bit(
         
         assign cout_stg1[1][6] = 1'b0;
         
-        for (g_i = 7; g_i < DATA_LEN*2; g_i++) begin 
-            c_4to2 c_4to2_stg1_0(.in1(pp[4][g_i]),
+        for (g_i = 7; g_i < DATA_LEN*2; g_i++) begin: c_4to2_stg1_1
+            c_4to2 c_4to2_stg1_1(.in1(pp[4][g_i]),
                                  .in2(pp[5][g_i]),
                                  .in3(pp[6][g_i]),
                                  .in4(pp[7][g_i]),
@@ -191,8 +194,8 @@ module signed_mul_4to2_tree_8bit(
         
         assign cout_stg2[0][2] = 1'b0;
         
-        for (g_i = 3; g_i < DATA_LEN*2; g_i++) begin 
-            c_4to2 c_4to2_stg1_0(.in1(in_stg2[0][g_i]),
+        for (g_i = 3; g_i < DATA_LEN*2; g_i++) begin: c_4to2_stg2_0
+            c_4to2 c_4to2_stg2_0(.in1(in_stg2[0][g_i]),
                                  .in2(in_stg2[1][g_i]),
                                  .in3(in_stg2[2][g_i]),
                                  .in4(in_stg2[3][g_i]), 
