@@ -1,5 +1,5 @@
-
-module compressor_4_2(
+ 
+module c_4to2(
 
   input wire logic in1, in2, in3, in4, cin,
   output logic s, c, cout
@@ -15,12 +15,11 @@ module compressor_4_2(
   assign i2_i3_i4 = ~(in2 ^ in3 ^ in4);
   assign s = ~(cin_in1 ^ i2_i3_i4); 
   
-  logic mux1;
-  logic mux0;
+  logic mux1, mux0;
   
   assign mux1 = ~(cin & in1);
   assign mux0 = ~(cin | in1);
-  assign c = (i2_i3_i4)?~mux1:~mux0; 
+  assign c = (i2_i3_i4) ? ~mux1 : ~mux0; 
   assign cout = ~((~(in2 & in3)) & (~(in2 & in4)) & (~(in3 & in4)));  
   
 endmodule
