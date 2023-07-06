@@ -1,21 +1,14 @@
 `timescale 1ns / 1ps
 //////////////////////////////////////////////////////////////////////////////////
-// Company: 
-// Engineer: 
 // 
+// Designer: Hayden Beames
+//
+//
+//
 // Create Date: 06/14/2023 10:29:41 AM
-// Design Name: 
 // Module Name: 4to2_tree
-// Project Name: 
-// Target Devices: 
-// Tool Versions: 
-// Description: 
 // 
-// Dependencies: 
-// 
-// Revision:
-// Revision 0.01 - File Created
-// Additional Comments:
+// Description: RISC 8 bit Signed multiplier. Includes a fast 4:2 compression tree
 // 
 //////////////////////////////////////////////////////////////////////////////////
 
@@ -30,6 +23,7 @@ localparam FALSE = 0;
 
 module signed_mul_4to2_tree_8bit(
     input wire logic clk,
+    input wire logic rst_n,
     input wire logic [DATA_LEN-1:0] op1, op2,
     input wire logic [FUNC3_WIDTH-1:0] func3,
     output logic [DATA_LEN*2-1:0] mul_result
@@ -63,7 +57,7 @@ module signed_mul_4to2_tree_8bit(
 		endcase
     end
     
-    logic [DATA_LEN-1:0][DATA_LEN*2-1:0] pp_nontri, pp;
+    logic [DATA_LEN-1:0][DATA_LEN*2-1:0] pp_nontri, pp; //pp_nontri is here to make optional transition to unsigned multiplication for dadda tree short -> not needed for signed MUL
     logic [DATA_LEN-1:0][DATA_LEN-1:0] multiplicand_qual;
     
     
@@ -73,9 +67,8 @@ module signed_mul_4to2_tree_8bit(
             multiplicand_qual[i] = op1 & {DATA_LEN{op2[i]}};
         end
         
-        //potential twos complement last partial product
-        if (signed_op2_ex1) 
-            multiplicand_qual[DATA_LEN-1] = {DATA_LEN{op2[DATA_LEN-1]}} & (~op1 + 1'b1);
+        if (signed_op2_ex1)
+            multiplicand_qual[DATA_LEN-1] = {DATA_LEN{op2[DATA_LEN-1]}} & (~op1 + 1'b1); //twos complement last partial product
         else
             multiplicand_qual[DATA_LEN-1] = {DATA_LEN{op2[DATA_LEN-1]}} & op1;
             
@@ -100,7 +93,7 @@ module signed_mul_4to2_tree_8bit(
                 pp_nontri[DATA_LEN-1][j] = signed_op1_ex1 & op2[DATA_LEN-1] & op1[DATA_LEN-1];
         end
 
-        pp_nontri[DATA_LEN-1][DATA_LEN*2-1] = signed_op1_ex1 & op2[DATA_LEN-1] & multiplicand_qual[DATA_LEN-1][DATA_LEN-1];
+        pp_nontri[DATA_LEN-1][DATA_LEN*2-1] = (signed_op1_ex1 ^ signed_op2_ex1) & op2[DATA_LEN-1] & multiplicand_qual[DATA_LEN-1][DATA_LEN-1]; //if both ops signed do not sign extend 1's
 
         /* Dont need to put lower partial products to upper to create triangle in signed multiplication
         for (int i = 0; i < DATA_LEN; i++) begin
