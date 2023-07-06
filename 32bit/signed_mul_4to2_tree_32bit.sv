@@ -28,7 +28,7 @@ localparam MULHU_FUNC3  = 3'b011;
 localparam TRUE = 1;
 localparam FALSE = 0;
 
-module signed_mul_4to2_tree_8bit(
+module signed_mul_4to2_tree_32bit(
     input wire logic clk,
     input wire logic [DATA_LEN-1:0] op1, op2,
     input wire logic [FUNC3_WIDTH-1:0] func3,
@@ -128,18 +128,6 @@ module signed_mul_4to2_tree_8bit(
     logic [DATA_LEN/16-1:0][DATA_LEN*2-1:0] in_stg5;
     
     genvar g_i,g_j;
-
-    //create in_stg2 default inputs (just original partial products)
-    always_comb begin          
-        for (int j = 0; j <= 15; j++)
-            for (int i = j; i >= 0; i--)
-                in_stg2[i][j] = pp[i][j];  
-        
-        for (int j = 16; j <= 30; j++)
-            for (int i = (j - 15); i <= 15; i++)
-                in_stg2[i][j] = pp[i + (j-15)][j];
-
-    end
     
     //stage 1 adder tree
     generate
@@ -274,21 +262,22 @@ module signed_mul_4to2_tree_8bit(
         
     endgenerate
     
-    //create stage 3 default inputs (just unused from stage 2)
-    always_comb begin
-        for (int j = 0; j <= 7; j++)
+    //create in_stg2 default inputs (just original partial products)
+    always_comb begin          
+        for (int j = 0; j <= 15; j++)
             for (int i = j; i >= 0; i--)
-                in_stg3[i][j] = in_stg2[i][j];  
+                in_stg2[i][j] = pp[i][j];  
         
-        for (int j = 8; j <= 14; j++)
-            for (int i = (j - 7); i <= 15; i++)
-                in_stg3[i][j] = in_stg2[i + (j-7)][j];
+        for (int j = 16; j <= 30; j++)
+            for (int i = (j - 15); i <= 15; i++)
+                in_stg2[i][j] = pp[i + (j-15)][j];
+
     end
     
     //stage 2 adder tree 
     generate
     
-        ha ha_stg2_8_0(.a(in_stg3[0][8]), .b(in_stg3[1][8]), .s(in_stg3[0][8]), .c(in_stg3[1][9]));
+        ha ha_stg2_8_0(.a(in_stg2[0][8]), .b(in_stg2[1][8]), .s(in_stg3[0][8]), .c(in_stg3[1][9]));
         
         assign cout_stg2[0][8] = 1'b0;
         
@@ -304,7 +293,7 @@ module signed_mul_4to2_tree_8bit(
                                  );                   
         end
         
-        ha ha_stg2_10_2(.a(in_stg3[4][10]), .b(in_stg3[5][10]), .s(in_stg3[2][10]), .c(in_stg3[3][11]));
+        ha ha_stg2_10_2(.a(in_stg2[4][10]), .b(in_stg2[5][10]), .s(in_stg3[2][10]), .c(in_stg3[3][11]));
         
         assign cout_stg2[1][10] = 1'b0;
         
@@ -320,7 +309,7 @@ module signed_mul_4to2_tree_8bit(
                                  );                   
         end
         
-        ha ha_stg2_12_4(.a(in_stg3[8][12]), .b(in_stg3[9][12]), .s(in_stg3[4][12]), .c(in_stg3[5][13]));
+        ha ha_stg2_12_4(.a(in_stg2[8][12]), .b(in_stg2[9][12]), .s(in_stg3[4][12]), .c(in_stg3[5][13]));
         
         assign cout_stg2[2][12] = 1'b0;
         
@@ -336,7 +325,7 @@ module signed_mul_4to2_tree_8bit(
                                  );                   
         end
         
-        ha ha_stg2_14_6(.a(in_stg3[12][14]), .b(in_stg3[13][14]), .s(in_stg3[6][14]), .c(in_stg3[7][15]));
+        ha ha_stg2_14_6(.a(in_stg2[12][14]), .b(in_stg2[13][14]), .s(in_stg3[6][14]), .c(in_stg3[7][15]));
         
         assign cout_stg2[3][14] = 1'b0;
         
@@ -354,14 +343,25 @@ module signed_mul_4to2_tree_8bit(
         
     endgenerate
     
+    //create stage 3 default inputs (just unused from stage 2)
+    always_comb begin
+        for (int j = 0; j <= 7; j++)
+            for (int i = j; i >= 0; i--)
+                in_stg3[i][j] = in_stg2[i][j];  
+        
+        for (int j = 8; j <= 14; j++)
+            for (int i = (j - 7); i <= 7; i++)
+                in_stg3[i][j] = in_stg2[i + (j-7)][j];
+    end
+    
     //stage 3 adder tree 
     generate
 
-        ha ha_stg3_4_0(.a(in_stg4[0][4]), .b(in_stg4[1][4]), .s(in_stg4[0][4]), .c(in_stg4[1][4]));
+        ha ha_stg3_4_0(.a(in_stg3[0][4]), .b(in_stg3[1][4]), .s(in_stg4[0][4]), .c(in_stg4[1][5]));
         
-        assign cout_stg3[0][8] = 1'b0;
+        assign cout_stg3[0][4] = 1'b0;
         
-        for (g_i = 9; g_i < DATA_LEN*2; g_i++) begin: c_4to2_stg3_0
+        for (g_i = 5; g_i < DATA_LEN*2; g_i++) begin: c_4to2_stg3_0
             c_4to2 c_4to2_stg3_0(.in1(in_stg3[0][g_i]),
                                  .in2(in_stg3[1][g_i]),
                                  .in3(in_stg3[2][g_i]),
@@ -371,10 +371,59 @@ module signed_mul_4to2_tree_8bit(
                                  .c(     in_stg4[1][g_i+1]),
                                  .cout(cout_stg3[0][g_i])
                                  );                   
-        end  
+        end 
+        
+        ha ha_stg3_6_2(.a(in_stg3[4][6]), .b(in_stg3[5][6]), .s(in_stg4[2][6]), .c(in_stg4[3][7]));
+        
+        assign cout_stg3[1][6] = 1'b0;
+        
+        for (g_i = 7; g_i < DATA_LEN*2; g_i++) begin: c_4to2_stg3_1
+            c_4to2 c_4to2_stg3_0(.in1(in_stg3[4][g_i]),
+                                 .in2(in_stg3[5][g_i]),
+                                 .in3(in_stg3[6][g_i]),
+                                 .in4(in_stg3[7][g_i]), 
+                                 .cin( cout_stg3[1][g_i-1]),
+                                 .s(     in_stg4[2][g_i]),
+                                 .c(     in_stg4[3][g_i+1]),
+                                 .cout(cout_stg3[1][g_i])
+                                 );                   
+        end 
+          
+    endgenerate
+    
+    //create stage 4 default inputs (just unused from stage 3)
+    always_comb begin
+        for (int j = 0; j <= 3; j++)
+            for (int i = j; i >= 0; i--)
+                in_stg4[i][j] = in_stg3[i][j];  
+        
+        for (int j = 4; j <= 6; j++)
+            for (int i = (j - 3); i <= 3; i++)
+                in_stg4[i][j] = in_stg3[i + (j-7)][j];
+    end
+    
+    //stage 4 adder tree
+    generate
+        
+        ha ha_stg4_2_0(.a(in_stg4[0][2]), .b(in_stg4[1][2]), .s(in_stg5[0][2]), .c(in_stg5[1][3]));
+        
+        assign cout_stg4[0][2] = 1'b0;
+        
+        for (g_i = 3; g_i < DATA_LEN*2; g_i++) begin: c_4to2_stg4_0
+            c_4to2 c_4to2_stg3_0(.in1(in_stg4[0][g_i]),
+                                 .in2(in_stg4[1][g_i]),
+                                 .in3(in_stg4[2][g_i]),
+                                 .in4(in_stg4[3][g_i]), 
+                                 .cin( cout_stg4[0][g_i-1]),
+                                 .s(     in_stg5[0][g_i]),
+                                 .c(     in_stg5[1][g_i+1]),
+                                 .cout(cout_stg4[0][g_i])
+                                 );                   
+        end
     endgenerate
     
     logic [DATA_LEN*2-1:0] sum_4to2_tree, cout_4to2_tree;
+    
 
     //stage 3 (add sum and carries for final product)
     always_comb begin
