@@ -29,7 +29,7 @@ localparam TRUE = 1;
 localparam FALSE = 0;
 
 module signed_mul_4to2_tree_32bit(
-    input wire logic clk,
+    input wire logic clk, rst_n,
     input wire logic [DATA_LEN-1:0] op1, op2,
     input wire logic [FUNC3_WIDTH-1:0] func3,
     output logic [DATA_LEN*2-1:0] mul_result
@@ -73,9 +73,8 @@ module signed_mul_4to2_tree_32bit(
             multiplicand_qual[i] = op1 & {DATA_LEN{op2[i]}};
         end
         
-        //potential twos complement last partial product
-        if (signed_op2_ex1) 
-            multiplicand_qual[DATA_LEN-1] = {DATA_LEN{op2[DATA_LEN-1]}} & (~op1 + 1'b1);
+        if (signed_op2_ex1)
+            multiplicand_qual[DATA_LEN-1] = {DATA_LEN{op2[DATA_LEN-1]}} & (~op1 + 1'b1); //twos complement last partial product
         else
             multiplicand_qual[DATA_LEN-1] = {DATA_LEN{op2[DATA_LEN-1]}} & op1;
             
@@ -92,15 +91,16 @@ module signed_mul_4to2_tree_32bit(
         
         //iterate over last partial product sign extension and placement
         for (int j = 0; j < DATA_LEN*2-1; j++) begin
-            if (j < (DATA_LEN-1))
+            if (j < (DATA_LEN-1)) 
                 pp_nontri[DATA_LEN-1][j] = 1'b0;
             else if (j < DATA_LEN + (DATA_LEN-1))
                 pp_nontri[DATA_LEN-1][j] = multiplicand_qual[DATA_LEN-1][j-(DATA_LEN-1)];
             else
                 pp_nontri[DATA_LEN-1][j] = signed_op1_ex1 & op2[DATA_LEN-1] & op1[DATA_LEN-1];
         end
-
-        pp_nontri[DATA_LEN-1][DATA_LEN*2-1] = signed_op1_ex1 & op2[DATA_LEN-1] & multiplicand_qual[DATA_LEN-1][DATA_LEN-1];
+    
+        //sign extension cases on last pp
+        pp_nontri[DATA_LEN-1][DATA_LEN*2-1] = ((signed_op1_ex1 & op1[DATA_LEN-1]) ^ (signed_op2_ex1 & op2[DATA_LEN-1])) & op2[DATA_LEN-1] & multiplicand_qual[DATA_LEN-1][DATA_LEN-1]; 
 
         /* Dont need to put lower partial products to upper to create triangle in signed multiplication
         for (int i = 0; i < DATA_LEN; i++) begin
@@ -122,10 +122,10 @@ module signed_mul_4to2_tree_32bit(
     logic [DATA_LEN/8 -1:0][DATA_LEN*2-1:0] cout_stg3;
     logic [DATA_LEN/16-1:0][DATA_LEN*2-1:0] cout_stg4;
     
-    logic [DATA_LEN/2 -1:0][DATA_LEN*2-1:0] in_stg2;
-    logic [DATA_LEN/4 -1:0][DATA_LEN*2-1:0] in_stg3;
-    logic [DATA_LEN/8 -1:0][DATA_LEN*2-1:0] in_stg4;
-    logic [DATA_LEN/16-1:0][DATA_LEN*2-1:0] in_stg5;
+    logic [DATA_LEN/2 -1:0][DATA_LEN*2-1:0] in_stg2 = '{default:'0};
+    logic [DATA_LEN/4 -1:0][DATA_LEN*2-1:0] in_stg3 = '{default:'0};
+    logic [DATA_LEN/8 -1:0][DATA_LEN*2-1:0] in_stg4 = '{default:'0};
+    logic [DATA_LEN/16-1:0][DATA_LEN*2-1:0] in_stg5 = '{default:'0};
     
     genvar g_i,g_j;
     
@@ -352,6 +352,7 @@ module signed_mul_4to2_tree_32bit(
         for (int j = 8; j <= 14; j++)
             for (int i = (j - 7); i <= 7; i++)
                 in_stg3[i][j] = in_stg2[i + (j-7)][j];
+                
     end
     
     //stage 3 adder tree 
@@ -399,7 +400,7 @@ module signed_mul_4to2_tree_32bit(
         
         for (int j = 4; j <= 6; j++)
             for (int i = (j - 3); i <= 3; i++)
-                in_stg4[i][j] = in_stg3[i + (j-7)][j];
+                in_stg4[i][j] = in_stg3[i + (j-3)][j];
     end
     
     //stage 4 adder tree
@@ -422,16 +423,47 @@ module signed_mul_4to2_tree_32bit(
         end
     endgenerate
     
-    logic [DATA_LEN*2-1:0] sum_4to2_tree, cout_4to2_tree;
+    //create stage 4 default inputs (just unused from stage 3)
+    always_comb begin
+        for (int j = 0; j <= 1; j++)
+            for (int i = j; i >= 0; i--)
+                in_stg5[i][j] = in_stg4[i][j];  
+        
+        for (int j = 2; j <= 2; j++)
+            for (int i = (j - 1); i <= 1; i++)
+                in_stg5[i][j] = in_stg4[i + (j-1)][j];
+    end
     
-
+    logic [DATA_LEN*2-1:0] sum_4to2_tree, cout_4to2_tree;
+    logic [DATA_LEN*2-1:0] TEST_stg2, TEST_stg3, TEST_stg4, TEST_stg5;
+    
+    always_comb begin
+        TEST_stg2 = '0;
+        TEST_stg3 = '0;
+        TEST_stg4 = '0;
+        TEST_stg5 = '0;
+        
+        for (int i = 0; i < DATA_LEN/2; i++)
+            TEST_stg2 += in_stg2[i];
+            
+        for (int i = 0; i < DATA_LEN/4; i++)
+            TEST_stg3 += in_stg3[i];
+            
+        for (int i = 0; i < DATA_LEN/8; i++)
+            TEST_stg4 += in_stg4[i];
+            
+        for (int i = 0; i < DATA_LEN/16; i++)
+            TEST_stg5 += in_stg5[i];
+            
+    end
+    
     //stage 3 (add sum and carries for final product)
     always_comb begin
         sum_4to2_tree  = '0;
         cout_4to2_tree = '0;
         for (int i = 1; i < (DATA_LEN*2); i++) begin
-            sum_4to2_tree[i]  = in_stg3[0][i];
-            cout_4to2_tree[i] = in_stg3[1][i];
+            sum_4to2_tree[i]  = in_stg5[0][i];
+            cout_4to2_tree[i] = in_stg5[1][i];
         end
         sum_4to2_tree[0] = in_stg3[0][0];
         
