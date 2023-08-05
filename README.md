@@ -12,4 +12,4 @@ Fast Multiplication algorithm in SystemVerilog by using 4 to 2 compressors combi
 
 - at end of multiplication tree, just use CPA (Carry Propogate Adder) to get final results
 
-## Currently exploring Hybrid 4:2 Compressipn tree with 3:2 CSA for Booth Recoding multiplication
+## Currently exploring Hybrid 4:2 Compression tree with 3:2 CSA for Booth Recoding multiplication
